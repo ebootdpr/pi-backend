@@ -1,7 +1,7 @@
 const { Router } = require("express");
 const { Country, Op, CountryKeys, conn } = require("../db");
 const router = Router();
-const { fetchApi } = require("../controllers");
+const { fetchApi, validateQuery } = require("../controllers");
 const { API_URL } = require("../constantes");
 
 function OK(data, res) {
@@ -25,7 +25,7 @@ router.get('/reset', async (req, res) => {
 router.get('/', async (req, res, next) => {
   try {
     if (localDb) {
-      if (localDb && req.query.name) next();
+      if (localDb && req.query) next();
       else {
         const data = await Country.findAll()
         OK(data, res)
@@ -40,14 +40,16 @@ router.get('/', async (req, res, next) => {
 },
   async (req, res) => {
     try {
+      const conditions = validateQuery(req.query)
+      console.log(conditions);
+
+      if (Array.isArray(conditions)) return NOTFOUND({ Error: 'Query inválido, estos son los querys validos: ' + conditions }, res)
       const data = await Country.findAll({
-        where: {
-          name:
-            { [Op.iLike]: '%' + req.query.name + '%' }
-        }
+        where: conditions
       })
-      if (data.length) OK(data, res)
-      else NOTFOUND({ Error: 'No se encontro ningun resultado' }, res)
+      if (!data.length) return NOTFOUND({ Error: 'No se encontro ningun resultado' }, res)
+      OK(data, res)
+
     } catch (error) {
       NOTFOUND(error, res)
     }
@@ -61,7 +63,8 @@ router.get('/:idpais', async (req, res) => {
   } catch (err) {
     res.status(501).send({ error: err, 'Error Interno': err.message })
   }
-})
+});
+
 
 
 

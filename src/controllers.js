@@ -1,6 +1,6 @@
 const { API_URL } = require('./constantes')
 const axios = require('axios')
-const { Country, Op, CountryKeys, conn } = require("./db");
+const { Country, Op,   conn, CountryAttributes } = require("./db");
 
 /**
  * Checkea si es objeto
@@ -30,7 +30,11 @@ function filtrarArray(DB, MODELKEYS) {
     return obj
   })
 };
-
+const CountryKeys = Object.keys(CountryAttributes);
+const SearchableTerms = CountryKeys.filter(str => {
+  if (CountryAttributes[str] === 'VARCHAR(255)') return true;
+  return false
+})
 /**
  * 
  * @param {Array} apiFiltrada Array de paises
@@ -64,19 +68,24 @@ module.exports = {
     await fillCountries(dbFiltrada, Country)
     return await Country.findAll()
   },
+  /**
+   * 
+   * @param {Object} query Objeto que contiene todas las query.
+   * @returns Un objeto listo para introducir dentro del where: 
+   */
+  validateQuery: (query) => {
+    const queris = Object.keys(query)
+    let aRetornar = {}
 
-  findDB: async function (string, constraints = null) {
-    switch (string) {
-      case 'Countries':
-        return await Country.findAll({ where: constraints })
-      case 'Activities':
-        return await Activities.findAll({ where: constraints })
-        break;
-      default:
-        throw new Error('error en ,debe especificar modelo en findDB')
-        break;
-    }
-  }
+    queris.forEach(key => {
+      if (SearchableTerms.includes(key) && query[key]) {
+        aRetornar[key] = { [Op.iLike]: `%${query[key]}%` }
+      };
+    });
+    if (Object.keys(aRetornar).length === 0) return SearchableTerms;
+    return aRetornar;
+  },
+
 
 
 }

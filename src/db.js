@@ -20,7 +20,7 @@ fs.readdirSync(path.join(__dirname, '/models'))
   .forEach((file) => {
     modelDefiners.push(require(path.join(__dirname, '/models', file)));
   });
-  
+
 // Injectamos la conexion (sequelize) a todos los modelos
 modelDefiners.forEach(model => model(sequelize));
 // Capitalizamos los nombres de los modelos ie: product => Product
@@ -42,13 +42,20 @@ Country.belongsToMany(Activities, { through: "actividades_turisticas" });
 Activities.belongsToMany(Country, { through: "actividades_turisticas" });
 
 //crea array de atributos
-let CountryKeys = Object.keys(Country.getAttributes())
-let ActivitiesKeys = Object.keys(Activities.getAttributes())
+let CountryAttributes = {}
+Object.keys(Country.getAttributes()).forEach(key => {
+  CountryAttributes[key] = Country.rawAttributes[key].type.toSql()
+})
+let ActivitiesAttributes = {}
+Object.keys(Activities.getAttributes()).forEach(key => {
+  ActivitiesAttributes[key] = Activities.rawAttributes[key].type.toSql()
+})
+
 
 module.exports = {
   ...sequelize.models, // para poder importar los modelos así: const { Product, User } = require('./db.js');
   conn: sequelize,     // para importart la conexión { conn } = require('./db.js');
   Op,
-  ActivitiesKeys,
-  CountryKeys,
+  CountryAttributes,
+  ActivitiesAttributes
 };
