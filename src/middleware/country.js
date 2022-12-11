@@ -1,14 +1,15 @@
 const { Router } = require("express");
-const { Country, Op, CountryKeys, conn } = require("../db");
+const { Country, conn } = require("../db");
 const router = Router();
-const { fetchApi, validateQuery } = require("../controllers");
-const { API_URL } = require("../constantes");
+const { fetchApi, findDB, getWhereConditions } = require("../controllers");
+const { validateQuery } = require("../validators");
+const { validCountryAtts } = require("../constantes");
 
 function OK(data, res) {
   res.status(200).send(data)
 }
 function NOTFOUND(data, res) {
-  res.status(404).send(data)
+  res.status(404).send({ error: data.message })
 }
 
 
@@ -25,13 +26,14 @@ router.get('/reset', async (req, res) => {
 router.get('/', async (req, res, next) => {
   try {
     if (localDb) {
-      if (localDb && req.query) next();
+      if (localDb && Object.keys(req.query).length > 0) next();
       else {
-        const data = await Country.findAll()
+        const data = await findDB()
         OK(data, res)
       }
     } else {
-      const data = await fetchApi()
+      await fetchApi()
+      const data = await findDB()
       OK(data, res); localDb = true; console.log('finalizado. A partir de ahora se usara una DB propia')
     }
   } catch (arror) {
@@ -40,14 +42,10 @@ router.get('/', async (req, res, next) => {
 },
   async (req, res) => {
     try {
-      const conditions = validateQuery(req.query)
-      console.log(conditions);
-
-      if (Array.isArray(conditions)) return NOTFOUND({ Error: 'Query inválido, estos son los querys validos: ' + conditions }, res)
-      const data = await Country.findAll({
-        where: conditions
-      })
-      if (!data.length) return NOTFOUND({ Error: 'No se encontro ningun resultado' }, res)
+      validateQuery(req.query)
+      const conditions = getWhereConditions(req.query)
+      const data = await findDB(conditions)
+      console.log(data);
       OK(data, res)
 
     } catch (error) {
