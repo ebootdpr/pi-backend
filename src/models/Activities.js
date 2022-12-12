@@ -48,19 +48,6 @@ module.exports = (sequelize) => {
       },
       set(value) {
         this.setDataValue('duration', value)
-      },
-      get(value) {
-        const convertMinutes = (minutes) => {
-          if (minutes === null || minutes == 0 || isNaN(minutes)) return "Undefined";
-          let h = Math.trunc(time / 60);
-          let m = time % 60;
-
-          let hDisplay = h > 0 ? h + (h === 1 ? " Hour " : " Hours ") : "";
-          let mDisplay = m > 0 ? m + (m === 1 ? " Minute " : " Minutes ") : "";
-
-          return hDisplay + mDisplay;
-        }
-        return convertMinutes(value)
       }
     },
   },

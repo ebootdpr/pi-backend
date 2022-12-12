@@ -77,27 +77,45 @@ module.exports = {
         }
       };
     });
-    console.log('d2');
     if (Object.keys(conditions).length === 0) return validCountryAtts;
-    console.log(conditions);
     return conditions;
   },
 
   findDB: async function (cond = null) {
     const arr = await Country.findAll({ where: cond })
+    if (arr.length === 0) throw new Error('No se encontró ninguna pais con esos términos');
+    return arr
+  },
+  findActivity: async function (cond = null) {
+    const arr = await Activities.findAll({ where: cond })
     if (arr.length === 0) throw new Error('No se encontró ninguna coincidencia');
     return arr
+  },
+  createPaises: async function (array) {
+    for (let i = 0; i < array.length; i++) {
+      const pais = array[i];
+      const arr = await Country.findAll({ where: { cca3: pais.cca3, name: pais.name, } })
+      if (arr.length > 0)
+        throw new Error('Porlomenos uno de los paises ya existe: nombre:' + pais.name + '  cca3:' + pais.cca3);
+    }
+    await Country.bulkCreate(array)
+    return { Sucess: 'Se han creado los paises exitosamente' }
   },
   /**
    * 
    * @param {Object} query Objeto que contiene todas las query.
    * @returns Un objeto listo para introducir dentro del where: 
    */
+  createActivity: async (body) => {
 
-  pushActivitiesToDb: async (body) => {
-
+    const datos = { ...body, duration: parseInt(body.duration), difficulty: parseInt(body.difficulty) }
+    const [found, created] = await Activities.findOrCreate({
+      where: { name: body.name },
+      defaults: datos
+    });
+    if (!created) throw new Error('La actividad ' + found.name + ' ya existe');
+    return found
   }
-
 
 
 }

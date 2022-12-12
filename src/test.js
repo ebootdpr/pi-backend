@@ -1,30 +1,26 @@
-function num(value) {
-  if (value > 47 && value < 58) return true;
-  return false
-}
-function ucase(value) {
-  if (value > 64 && value < 91) return true;
-  return false
-}
-function lcase(value) {
-  if (value > 96 && value < 123) return true;
-  return false
-}
-function isAlphaNumeric(inputStr) {
-  if (inputStr.length < 3) return [false, 'Debe ser mayor a 3 caracteres']
-  let code = inputStr.charCodeAt(0);
-  if (!ucase(code)) return [false, 'Debe comenzar con mayusculas'];
-  const arrayDeStrings = inputStr.split(' ')
-  for (const str of arrayDeStrings) {
-    if(!str) return [false, 'No debe contener multiples espacios o terminar en espacio']
-    for (let i = 1; i < str.length; i++) {
-      code = str.charCodeAt(i);
-      if (!num(code) && // numeric (0-9)
-        !ucase(code) && // upper alpha (A-Z)
-        !lcase(code)) { // lower alpha (a-z)
-        return [false, 'Debe ser alfanumérico'];
-      }
-    }
+const axios = require('axios')
+const apiCountriesClean = country => {
+  return {
+    id: country.cca3,
+    name: country.name,
+    bandera: country.flags.png,
+    capital: country.capital ? country.capital[0] : 'Sin capital',
+    subregion: country.subregion,
+    continente: country.region,
+    area: country.area,
+    poblacion: country.population
   }
-  return [true, 'Validado'];
-};
+}
+
+const bulkCreateCountries = async () => {
+  let response = await fetch("https://restcountries.com/v3.1/all")
+  let apiCountries = await response.json()
+  let result = apiCountries.map((country) => {
+    return apiCountriesClean(country)
+  })
+  console.log(result);
+  return result
+}
+bulkCreateCountries()
+
+

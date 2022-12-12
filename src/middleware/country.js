@@ -1,15 +1,14 @@
 const { Router } = require("express");
 const { Country, conn } = require("../db");
 const router = Router();
-const { fetchApi, findDB, getWhereConditions } = require("../controllers");
-const { validateQuery } = require("../validators");
-const { validCountryAtts } = require("../constantes");
+const { fetchApi, findDB, getWhereConditions, createPaises } = require("../controllers");
+const { validateQuery, validateBodyForBulk, validateCountry, validateString, validateCCA3 } = require("../validators");
 
 function OK(data, res) {
-  res.status(200).send(data)
+  res.status(200).send({ Sucess: data })
 }
 function NOTFOUND(data, res) {
-  res.status(404).send({ error: data.message })
+  res.status(404).send({ Error: data.message })
 }
 
 
@@ -22,7 +21,18 @@ router.get('/reset', async (req, res) => {
   })
 
 })
-//TODO: Hacer que por query pueda pasar CountryKeys
+//TODO: paginacion
+//TODO: 
+router.post('/create', async (req, res) => {
+  try {
+    validateBodyForBulk(req.body)
+    for (const pais of req.body) { validateString(pais), validateCountry(pais) }
+    const data = await createPaises(req.body)
+    res.status(200).send(data)
+  } catch (error) {
+    res.status(501).send({ Error: error.message })
+  }
+})
 router.get('/', async (req, res, next) => {
   try {
     if (localDb) {
@@ -42,6 +52,7 @@ router.get('/', async (req, res, next) => {
 },
   async (req, res) => {
     try {
+      validateString(req.query)
       validateQuery(req.query)
       const conditions = getWhereConditions(req.query)
       const data = await findDB(conditions)
@@ -55,11 +66,13 @@ router.get('/', async (req, res, next) => {
 
 router.get('/:idpais', async (req, res) => {
   try {
+    validateString(req.params)
+    validateCCA3(req.params.idpais)
     const data = await Country.findByPk(req.params.idpais.toUpperCase())
     if (data) OK(data, res)
-    else NOTFOUND({ Error: 'No se encontró un país con el id ' + req.params.idpais.toUpperCase() }, res)
+    else res.status(404).send({ Error: 'No se encontró un país con el cca3: ' + req.params.idpais.toUpperCase() })
   } catch (err) {
-    res.status(501).send({ error: err, 'Error Interno': err.message })
+    res.status(501).send({ Error: err.message })
   }
 });
 
