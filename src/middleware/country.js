@@ -1,8 +1,8 @@
 const { Router } = require("express");
 const { Country, conn } = require("../db");
 const router = Router();
-const { fetchApi, findDB, getWhereConditions, createPaises } = require("../controllers");
-const { validateQuery, validateBodyForBulk, validateCountry, validateString, validateCCA3 } = require("../validators");
+const { fetchApi, findDB, getWhereConditions, createPaises, filtrarPaises } = require("../controllers");
+const { validateQuery, validateBodyForBulk, validateCountry, validateString, validateCCA3, validatePageRoute } = require("../validators");
 
 function OK(data, res) {
   res.status(200).send({ Sucess: data })
@@ -23,6 +23,38 @@ router.get('/reset', async (req, res) => {
 })
 //TODO: paginacion
 //TODO: 
+router.get("/page/:pgnumber", async (req, res) => {
+  // if (!localDb) res.redirect('/countries');
+  try {
+    const page = req.params.pgnumber
+    const filtros = req.query
+    const orden = req.body
+    validatePageRoute(page, orden)
+    let conditions = null
+    if (Object.keys(filtros).length > 0) {
+      validateString(filtros)
+      validateQuery(filtros)
+      conditions = getWhereConditions(filtros)
+    }
+    const found = await filtrarPaises(page, conditions,orden  )
+    res.send({ Sucess: found })
+
+    /* 
+  [ ] Filtrar 
+      por continente y 
+      por tipo de actividad turística
+- [ ] para ordenar tanto ASC como DESC los países: 
+      por orden alfabético
+      por cantidad de población
+- [ ] Paginado 
+      10 paises por pagina
+      primeros 9 en la primer pagina. 
+      */
+
+  } catch (error) {
+    res.status(404).send({ Error: error.message })
+  }
+})
 router.post('/create', async (req, res) => {
   try {
     validateBodyForBulk(req.body)
@@ -58,7 +90,6 @@ router.get('/', async (req, res, next) => {
       validateQuery(req.query)
       const conditions = getWhereConditions(req.query)
       const data = await findDB(conditions)
-      console.log(data);
       OK(data, res)
 
     } catch (error) {

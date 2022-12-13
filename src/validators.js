@@ -1,3 +1,4 @@
+const { or } = require('sequelize');
 const { validCountryAtts, validActivitiesAtts, validSeasons, validContinents } = require('./constantes');
 function strIsNumeric(str) {
   for (let i = 0; i < str.length; i++) {
@@ -112,7 +113,6 @@ const validateQuery = (input) => {
   return true;
 };
 const validateCountry = (input) => {
-  const listaDeErrores = {}
   const queryKeys = Object.keys(input)
   for (const key of queryKeys) {
     if (!validCountryAtts.includes(key))
@@ -146,6 +146,23 @@ const validateAssignBody = (reqbody) => {
   }
 }
 
+const validatePageRoute = (page, orden) => {
+  if (isNaN(page)) throw new Error('Debe ingresar un valor numérico');
+  if (!Array.isArray(orden) && !(orden.length === 1) && typeof orden[0][1] !== 'string' && typeof orden[0][0] !== 'string')
+    throw new Error('Body inválido, debe ser un array con 2 strings como elementos')
+  if (!validCountryAtts.includes(orden[0][0]))
+    throw new Error('El primer elemento debe ser uno de estos ' + validCountryAtts)
+  if (!['ASC', 'DESC'].includes(orden[0][1]))
+    throw new Error('Orden debe ser ASC o DESC')
+}
+const validatePageRouteActividad = (page, actividad) => {
+  if (isNaN(page)) throw new Error('Debe ingresar un valor numérico');
+  if (!actividad && !actividad.hasOwnProperty('name') && typeof actividad.name !== 'string')
+    throw new Error('Body inválido, debe ser un objeto con name de atributo')
+  if (!isAlphaNumeric(actividad.name))
+    throw new Error('El nombre de la actividad debe ser uno de estos ' + validActivitiesAtts)
+}
+
 
 module.exports = {
   isAlphaNumeric,
@@ -157,4 +174,6 @@ module.exports = {
   validateString,
   validateCCA3,
   validateAssignBody,
+  validatePageRoute,
+  validatePageRouteActividad,
 }

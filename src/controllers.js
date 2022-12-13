@@ -13,12 +13,7 @@ function CheckeoRecursivo(input) {
   }
   return CheckeoRecursivo(input[Object.keys(input)[0]])
 };
-/**
- * Filtra usando MODELKEYS
- * @param {Array} DB Objetos a checkear
- * @param {Array} MODELKEYS Strings de attributos a checkear
- * @returns Array de objetos filtrados
- */
+
 function filtrarArray(DB) {
   return DB.map(ele => {
     const obj = {}
@@ -31,11 +26,7 @@ function filtrarArray(DB) {
   })
 };
 
-/**
- * 
- * @param {Array} input Array de paises
- * @param {Model} Country Sequelize model
- */
+
 async function fillCountries(input) {
   const promesas = input.map(async ele => {
     if (ele.cca3) {
@@ -66,7 +57,6 @@ module.exports = {
   getWhereConditions: (query) => {
     const queryKeys = Object.keys(query)
     let conditions = {}
-    console.log('d1');
     queryKeys.forEach(key => {
       if (validCountryAtts.includes(key) && query[key]) {
         if (key === 'population' || key === 'area') {
@@ -111,11 +101,7 @@ module.exports = {
     await Country.bulkCreate(array)
     return { Sucess: 'Se han creado los paises exitosamente' }
   },
-  /**
-   * 
-   * @param {Object} query Objeto que contiene todas las query.
-   * @returns Un objeto listo para introducir dentro del where: 
-   */
+
   createActivity: async (body) => {
 
     const datos = { ...body, duration: parseInt(body.duration), difficulty: parseInt(body.difficulty) }
@@ -124,6 +110,53 @@ module.exports = {
       defaults: datos
     });
     if (!created) throw new Error('La actividad ' + found.name + ' ya existe');
+    return found
+  },
+  filtrarPaises: async (page, filtros = null, orden = [['cca3', 'ASC']]) => {
+    const activi = null
+    page = parseInt(page)
+    if (page < 1) page = 1; //evita el 0 y negativos
+    let limit = 10
+    let offset = (page - 1) * limit - 1
+    if (page === 1) {
+      limit = 9
+      offset = 0
+    }
+    const found = await Country.findAll({
+      where: filtros,
+      include: [{
+        model: Activities,
+        where: activi,
+        attributes: ['id', 'name', 'difficulty', 'season', 'duration']
+      }],
+      offset,
+      limit,
+      order: orden
+    })
+    if (!found)
+      throw new Error('No es encontró ningún pais que matchee');
+    return found
+  },
+  filtrarPaisesPorActividad: async (page, actividad) => {
+    page = parseInt(page)
+    if (page < 1) page = 1; //evita el 0 y negativos
+    let limit = 10
+    let offset = (page - 1) * limit - 1
+    if (page === 1) {
+      limit = 9
+      offset = 0
+    }
+    const found = await Country.findAll({
+      include: [{
+        model: Activities,
+        where: { name: actividad.name },
+        attributes: ['id', 'name', 'difficulty', 'season', 'duration']
+      }],
+      offset,
+      limit,
+    })
+    if (!found)
+      throw new Error('No es encontró ningún pais que matchee');
     return found
   },
 
@@ -143,5 +176,4 @@ module.exports = {
         })
     }
   }
-
 }
