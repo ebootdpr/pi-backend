@@ -2,7 +2,7 @@ const { validCountryAtts, validActivitiesAtts, validSeasons, validContinents } =
 function strIsNumeric(str) {
   for (let i = 0; i < str.length; i++) {
     const code = str.charCodeAt(i);
-    if (!isNum(code)) { // lower alpha (a-z)
+    if (!isNum(code)) {
       return false;
     }
   }
@@ -135,6 +135,16 @@ const validateCountry = (input) => {
     throw new Error('population debe ser un número');
   return true;
 };
+const validateAssignBody = (reqbody) => {
+  if (!Array.isArray(reqbody) || !Array.isArray(reqbody[0]) || !Array.isArray(reqbody[1]) || reqbody.length !== 2)
+    throw new Error('Debe enviar un array de longitud 2 que contengan 0: cca3 array de paises y 1: array de ID de actividades');
+  for (const cca3 of reqbody[0]) {
+    validateCCA3(cca3)
+  }
+  for (const id of reqbody[1]) {
+    if (!strIsNumeric('' + id + '')) throw new Error('la id debe ser numerica, se recibió ' + id);
+  }
+}
 
 
 module.exports = {
@@ -145,5 +155,6 @@ module.exports = {
   validateBodyForBulk,
   validateCountry,
   validateString,
-  validateCCA3
+  validateCCA3,
+  validateAssignBody,
 }

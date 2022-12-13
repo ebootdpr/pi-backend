@@ -44,7 +44,9 @@ router.get('/', async (req, res, next) => {
     } else {
       await fetchApi()
       const data = await findDB()
-      OK(data, res); localDb = true; console.log('finalizado. A partir de ahora se usara una DB propia')
+      OK(data, res);
+      localDb = true;
+      console.log('finalizado. A partir de ahora se usara una DB propia')
     }
   } catch (arror) {
     res.status(501).send({ error: arror, message: arror.message })

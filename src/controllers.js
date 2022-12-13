@@ -59,7 +59,6 @@ module.exports = {
   fetchApi: async function () {
     console.log('recopilando datos de ' + API_URL + ' por unica vez...')
     const response = await axios.get(API_URL)
-    console.log('test1');
     const DB = response.data
     const dbFiltrada = filtrarArray(DB)
     await fillCountries(dbFiltrada)
@@ -81,14 +80,25 @@ module.exports = {
     return conditions;
   },
 
-  findDB: async function (cond = null) {
-    const arr = await Country.findAll({ where: cond })
+  findDB: async function (cond = null, model = null) {
+    const arr = await Country.findAll({
+      where: cond,
+      include: {
+        model: Activities
+      }
+    })
     if (arr.length === 0) throw new Error('No se encontró ninguna pais con esos términos');
     return arr
   },
   findActivity: async function (cond = null) {
-    const arr = await Activities.findAll({ where: cond })
-    if (arr.length === 0) throw new Error('No se encontró ninguna coincidencia');
+    const arr = await Activities.findAll({
+      where: cond,
+      include: {
+        model: Country,/* 
+        attributes: ["CountryCca3"] */
+      }
+    })
+    if (arr.length === 0) throw new Error('No se encontró ninguna actividad');
     return arr
   },
   createPaises: async function (array) {
@@ -115,7 +125,23 @@ module.exports = {
     });
     if (!created) throw new Error('La actividad ' + found.name + ' ya existe');
     return found
-  }
+  },
 
+  assignActivities: async (reqbody) => {
+    for (const id of reqbody[1]) {
+      const actividad = await Activities.findByPk(id)
+      if (!actividad)
+        throw new Error('La actividad no existe: id=' + id)
+    }
+    for (const cca3 of reqbody[0]) {
+      const pais = await Country.findByPk(cca3.toUpperCase())
+      if (!pais)
+        throw new Error('El pais con cca3=' + cca3 + ' no xiste')
+      await pais.addActivities(reqbody[1])
+        .catch(arr => {
+          throw new Error("El pais con cca3=" + cca3 + " ya tiene una de las actividades")
+        })
+    }
+  }
 
 }
