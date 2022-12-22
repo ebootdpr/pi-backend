@@ -47,23 +47,22 @@ async function fillCountries(input) {
 
 module.exports = {
   //fetchea TODA la API y retorna el resultado
-  fetchApi: async function() {
+  fetchApi: async function () {
     console.log('recopilando datos de ' + API_URL + ' por unica vez...')
     const response = await axios.get(API_URL)
     const DB = response.data
     const dbFiltrada = filtrarArray(DB)
     await fillCountries(dbFiltrada)
   },
-  getWhereConditions: (query) => {
-
-    const queryKeys = Object.keys(query)
+  getWhereConditions: (whereObj) => {
+    const queryKeys = Object.keys(whereObj)
     let conditions = {}
     queryKeys.forEach(key => {
-      if (validCountryAtts.includes(key) && query[key]) {
+      if (validCountryAtts.includes(key) && whereObj[key]) {
         if (key === 'population' || key === 'area') {
-          conditions[key] = { [Op.gte]: query[key] }
+          conditions[key] = { [Op.gte]: whereObj[key] }
         } else {
-          conditions[key] = { [Op.iLike]: `%${query[key]}%` }
+          conditions[key] = { [Op.iLike]: `%${whereObj[key]}%` }
         }
       };
     });
@@ -86,7 +85,7 @@ module.exports = {
     return conditions;
   },
 
-  findDB: async function(cond = null, model = null) {
+  findDB: async function (cond = null, model = null) {
     const arr = await Country.findAll({
       where: cond,
       include: {
@@ -96,7 +95,7 @@ module.exports = {
     if (arr.length === 0) throw new Error('No se encontró ninguna pais con esos términos');
     return arr
   },
-  findActivity: async function(cond = null) {
+  findActivity: async function (cond = null) {
     const arr = await Activities.findAll({
       where: cond,
       include: {
@@ -107,7 +106,7 @@ module.exports = {
     if (arr.length === 0) throw new Error('No se encontró ninguna actividad');
     return arr
   },
-  createPaises: async function(array) {
+  createPaises: async function (array) {
     for (let i = 0; i < array.length; i++) {
       const pais = array[i];
       const arr = await Country.findAll({ where: { cca3: pais.cca3, name: pais.name, } })
@@ -119,14 +118,32 @@ module.exports = {
   },
 
   createActivity: async (body) => {
+    const data = []
+    console.log('asd');
+    for (const ele of body) {
+      console.log(ele);
+      const arr = await Activities.findOne({ where: { name: ele.name } })
 
-    const datos = { ...body, duration: parseInt(body.duration), difficulty: parseInt(body.difficulty) }
-    const [found, created] = await Activities.findOrCreate({
-      where: { name: body.name },
-      defaults: datos
-    });
-    if (!created) throw new Error('La actividad ' + found.name + ' ya existe');
-    return found
+      if (arr)
+        throw new Error('Porlomenos uno de las actividades ya existe: id:' + ele.name);
+      data.push({ ...ele, duration: parseInt(ele.duration), difficulty: parseInt(ele.difficulty) })
+    }
+    await Activities.bulkCreate(data)
+    return data
+
+  },
+  //const data = 
+  countryByCCA3: async (cca3) => {
+    return await Country.findByPk(cca3.idpais.toUpperCase())
+  },
+  activityByCCA3: async (id) => {
+    return await Activities.findByPk(id.idpais.toUpperCase())
+  },
+  activityByName: async (name) => {
+
+    return await Activities.findOne({
+      where: { name: name },
+    })
   },
 
   contarPaises: async (whereCond = null, whereCondActi = null) => {
@@ -181,6 +198,36 @@ module.exports = {
     return found
   },
 
+  findAll: async (whereCond = null, whereCondActi = null, body) => {
+    let limit = null
+    let offset = null
+    if (body.page !== null) {
+      if (body.page < 1) body.page = 1; //evita el 0 y negativos
+      limit = 10
+
+      offset = (body.page - 1) * limit - 1
+      if (body.page === 1) { //primera pagina
+        limit = 9
+        offset = 0
+
+      }
+    }
+    const found = await Country.findAll({
+      where: whereCond,
+      include: [{
+        model: Activities,
+        where: whereCondActi,
+        attributes: ['id', 'name', 'difficulty', 'season', 'duration']
+      }],
+      order: body.orden,
+      limit,
+      offset,
+    })
+    if (!found)
+      throw new Error('No se encontró ningún pais que matchee');
+    return found
+  },
+
 
   assignActivities: async (reqbody) => {
     for (const id of reqbody[1]) {
@@ -191,7 +238,7 @@ module.exports = {
     for (const cca3 of reqbody[0]) {
       const pais = await Country.findByPk(cca3.toUpperCase())
       if (!pais)
-        throw new Error('El pais con cca3=' + cca3 + ' no xiste')
+        throw new Error('El pais con cca3=' + cca3 + ' no existe')
       await pais.addActivities(reqbody[1])
         .catch(arr => {
           throw new Error("El pais con cca3=" + cca3 + " ya tiene una de las actividades")
