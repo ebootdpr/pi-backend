@@ -1,5 +1,4 @@
-const { or } = require('sequelize');
-const { validCountryAtts, validActivitiesAtts, validSeasons, validContinents } = require('./constantes');
+const { validCountryAtts, validActivitiesAtts, validSeasons, validContinents, validActivitiesAttsAct_ } = require('./constantes');
 function strIsNumeric(str) {
   for (let i = 0; i < str.length; i++) {
     const code = str.charCodeAt(i);
@@ -146,22 +145,45 @@ const validateAssignBody = (reqbody) => {
   }
 }
 
-const validatePageRoute = (page, orden) => {
+const validatePageRoute = (params, querys, body) => {
+
+  let page = params.pgnumber, whereObj = null, whereObjIncludes = null, orden = [['cca3', 'ASC']]
+  if (body.hasOwnProperty('0')) {
+    if (!Array.isArray(body) && !(body.length === 1) && typeof body[0][1] !== 'string' && typeof body[0][0] !== 'string')
+      throw new Error('Body inválido, debe ser un array con 2 strings como elementos')
+    if (!validCountryAtts.includes(body[0][0]))
+      throw new Error('El primer elemento debe ser uno de estos ' + validCountryAtts)
+    if (!['ASC', 'DESC'].includes(body[0][1]))
+      throw new Error('body debe ser ASC o DESC')
+    orden = body
+  }
   if (isNaN(page)) throw new Error('Debe ingresar un valor numérico');
-  if (!Array.isArray(orden) && !(orden.length === 1) && typeof orden[0][1] !== 'string' && typeof orden[0][0] !== 'string')
-    throw new Error('Body inválido, debe ser un array con 2 strings como elementos')
-  if (!validCountryAtts.includes(orden[0][0]))
-    throw new Error('El primer elemento debe ser uno de estos ' + validCountryAtts)
-  if (!['ASC', 'DESC'].includes(orden[0][1]))
-    throw new Error('Orden debe ser ASC o DESC')
+
+  //? Checkea y filtra querys para generar los where
+  const keyQuerys = Object.keys(querys)
+  const whereKeys = keyQuerys.filter(key => validCountryAtts.includes(key))
+  const whereIncludeKeys = keyQuerys.filter(key => validActivitiesAttsAct_.includes(key))
+  console.log(whereIncludeKeys);
+  console.log(keyQuerys);
+  console.log(validActivitiesAttsAct_);
+  if (whereKeys.length > 0) {
+    whereObj = {}
+    whereKeys.forEach(key => {
+      whereObj[key] = querys[key]
+    })
+  }
+  if (whereIncludeKeys.length > 0) {
+    whereObjIncludes = {}
+    whereIncludeKeys.map(key => {
+      console.log(key.slice(4));
+      return key.slice(4)
+    }).forEach(key => {
+      whereObjIncludes[key] = querys['act_' + key]
+    })
+  }
+  return { page, whereObj, whereObjIncludes, orden }
 }
-const validatePageRouteActividad = (page, actividad) => {
-  if (isNaN(page)) throw new Error('Debe ingresar un valor numérico');
-  if (!actividad && !actividad.hasOwnProperty('name') && typeof actividad.name !== 'string')
-    throw new Error('Body inválido, debe ser un objeto con name de atributo')
-  if (!isAlphaNumeric(actividad.name))
-    throw new Error('El nombre de la actividad debe ser uno de estos ' + validActivitiesAtts)
-}
+
 
 
 module.exports = {
@@ -175,5 +197,4 @@ module.exports = {
   validateCCA3,
   validateAssignBody,
   validatePageRoute,
-  validatePageRouteActividad,
 }

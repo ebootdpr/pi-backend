@@ -1,4 +1,4 @@
-const { API_URL, validCountryAtts } = require('./constantes')
+const { API_URL, validCountryAtts, validActivitiesAtts } = require('./constantes')
 const axios = require('axios')
 const { Country, Op, conn, Activities } = require("./db");
 
@@ -47,7 +47,7 @@ async function fillCountries(input) {
 
 module.exports = {
   //fetchea TODA la API y retorna el resultado
-  fetchApi: async function () {
+  fetchApi: async function() {
     console.log('recopilando datos de ' + API_URL + ' por unica vez...')
     const response = await axios.get(API_URL)
     const DB = response.data
@@ -55,6 +55,7 @@ module.exports = {
     await fillCountries(dbFiltrada)
   },
   getWhereConditions: (query) => {
+
     const queryKeys = Object.keys(query)
     let conditions = {}
     queryKeys.forEach(key => {
@@ -69,8 +70,23 @@ module.exports = {
     if (Object.keys(conditions).length === 0) return validCountryAtts;
     return conditions;
   },
+  getWhereConditionsActivities: (whereObjIncludes) => {
+    const objKeys = Object.keys(whereObjIncludes)
+    let conditions = {}
+    objKeys.forEach(key => {
+      if (validActivitiesAtts.includes(key) && whereObjIncludes[key]) {
+        if (key === 'difficulty' || key === 'duration') {
+          conditions[key] = { [Op.gte]: whereObjIncludes[key] }
+        } else {
+          conditions[key] = { [Op.iLike]: `%${whereObjIncludes[key]}%` }
+        }
+      };
+    });
+    if (Object.keys(conditions).length === 0) return null;
+    return conditions;
+  },
 
-  findDB: async function (cond = null, model = null) {
+  findDB: async function(cond = null, model = null) {
     const arr = await Country.findAll({
       where: cond,
       include: {
@@ -80,7 +96,7 @@ module.exports = {
     if (arr.length === 0) throw new Error('No se encontró ninguna pais con esos términos');
     return arr
   },
-  findActivity: async function (cond = null) {
+  findActivity: async function(cond = null) {
     const arr = await Activities.findAll({
       where: cond,
       include: {
@@ -91,7 +107,7 @@ module.exports = {
     if (arr.length === 0) throw new Error('No se encontró ninguna actividad');
     return arr
   },
-  createPaises: async function (array) {
+  createPaises: async function(array) {
     for (let i = 0; i < array.length; i++) {
       const pais = array[i];
       const arr = await Country.findAll({ where: { cca3: pais.cca3, name: pais.name, } })
@@ -112,8 +128,20 @@ module.exports = {
     if (!created) throw new Error('La actividad ' + found.name + ' ya existe');
     return found
   },
-  filtrarPaises: async (page, filtros = null, orden = [['cca3', 'ASC']]) => {
-    const activi = null
+
+  contarPaises: async (whereCond = null, whereCondActi = null) => {
+    const count = await Country.count({
+      where: whereCond,
+      include: [{
+        model: Activities,
+        where: whereCondActi,
+      }],
+    })
+    if (!count)
+      throw new Error('No es encontró ningún pais que matchee');
+    return count
+  },
+  filtrarPaises: async (page, whereCond = null, whereCondActi = null, orden = [['cca3', 'ASC']]) => {
     page = parseInt(page)
     if (page < 1) page = 1; //evita el 0 y negativos
     let limit = 10
@@ -123,10 +151,10 @@ module.exports = {
       offset = 0
     }
     const found = await Country.findAll({
-      where: filtros,
+      where: whereCond,
       include: [{
         model: Activities,
-        where: activi,
+        where: whereCondActi,
         attributes: ['id', 'name', 'difficulty', 'season', 'duration']
       }],
       offset,
@@ -137,28 +165,22 @@ module.exports = {
       throw new Error('No es encontró ningún pais que matchee');
     return found
   },
-  filtrarPaisesPorActividad: async (page, actividad) => {
-    page = parseInt(page)
-    if (page < 1) page = 1; //evita el 0 y negativos
-    let limit = 10
-    let offset = (page - 1) * limit - 1
-    if (page === 1) {
-      limit = 9
-      offset = 0
-    }
+
+  getAll: async (whereCond = null, whereCondActi = null, orden = [['cca3', 'ASC']]) => {
     const found = await Country.findAll({
+      where: whereCond,
       include: [{
         model: Activities,
-        where: { name: actividad.name },
+        where: whereCondActi,
         attributes: ['id', 'name', 'difficulty', 'season', 'duration']
       }],
-      offset,
-      limit,
+      order: orden
     })
     if (!found)
       throw new Error('No es encontró ningún pais que matchee');
     return found
   },
+
 
   assignActivities: async (reqbody) => {
     for (const id of reqbody[1]) {
