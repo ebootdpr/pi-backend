@@ -34,9 +34,9 @@ router.get('/', async (req, res, next) => {
       const body = validate.countriesBody(req.body)
       const { whereObj, whereObjIncludes } = validate.countriesQuery(req.query)
       let whereCond = null, whereCondActi = null
-      if (whereObj && Object.keys(whereObj).length > 0)
+      if (whereObj && Object.keys(whereObj).length > 0) //escalable
         whereCond = controllers.getWhereConditions(whereObj)
-      if (whereObjIncludes && Object.keys(whereObjIncludes).length > 0)
+      if (whereObjIncludes && Object.keys(whereObjIncludes).length > 0)//escalable
         whereCondActi = controllers.getWhereConditionsActivities(whereObjIncludes)
       const data = await controllers.findAll(whereCond, whereCondActi, body)
       return res.status(200).send({ sucess: true, message: "Se han encontrado " + data.length + " resultados", found: data.length, data: data })
@@ -57,11 +57,12 @@ router.get('/:idpais', async (req, res) => {
   try {
     validate.validateString(req.params)
     validate.validateCCA3(req.params.idpais)
-    const data = await controllers.countryByCCA3(req.params)
+    const data = await controllers.countryByCCA3(req.params.idpais)
     if (data)
       return res.status(200).send({ sucess: true, message: data.length + "País encontrado", found: data.length, data: [data] });
     else return res.status(404).send({ sucess: false, message: `No se encontró un país con el cca3:  ${req.params.idpais.toUpperCase()}`, found: data.length, data: [] })
   } catch (err) {
+	  const data=[]
     return res.status(501).send({ sucess: false, message: err.message, found: data.length, data: [] })
   }
 });

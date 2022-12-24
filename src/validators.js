@@ -198,6 +198,7 @@ const countriesQuery = (querys) => {
    * ! para hacer query de activity se debe usar prefijo act_ para cada atributo
    */
   const keyQuerys = Object.keys(querys)
+  if(keyQuerys.length==0) return { whereObj, whereObjIncludes }; //escalabilidad
   const whereKeys = keyQuerys.filter(key => validCountryAtts.includes(key))
   const whereIncludeKeys = keyQuerys.filter(key => validActivitiesAttsAct_.includes(key))
   if (whereKeys.length > 0) {

@@ -47,7 +47,7 @@ async function fillCountries(input) {
 
 module.exports = {
   //fetchea TODA la API y retorna el resultado
-  fetchApi: async function () {
+  fetchApi: async function() {
     console.log('recopilando datos de ' + API_URL + ' por unica vez...')
     const response = await axios.get(API_URL)
     const DB = response.data
@@ -85,7 +85,7 @@ module.exports = {
     return conditions;
   },
 
-  findDB: async function (cond = null, model = null) {
+  findDB: async function(cond = null, model = null) {
     const arr = await Country.findAll({
       where: cond,
       include: {
@@ -95,7 +95,7 @@ module.exports = {
     if (arr.length === 0) throw new Error('No se encontró ninguna pais con esos términos');
     return arr
   },
-  findActivity: async function (cond = null) {
+  findActivity: async function(cond = null) {
     const arr = await Activities.findAll({
       where: cond,
       include: {
@@ -106,7 +106,7 @@ module.exports = {
     if (arr.length === 0) throw new Error('No se encontró ninguna actividad');
     return arr
   },
-  createPaises: async function (array) {
+  createPaises: async function(array) {
     for (let i = 0; i < array.length; i++) {
       const pais = array[i];
       const arr = await Country.findAll({ where: { cca3: pais.cca3, name: pais.name, } })
@@ -119,9 +119,9 @@ module.exports = {
 
   createActivity: async (body) => {
     const data = []
-    console.log('asd');
+
     for (const ele of body) {
-      console.log(ele);
+
       const arr = await Activities.findOne({ where: { name: ele.name } })
 
       if (arr)
@@ -134,13 +134,16 @@ module.exports = {
   },
   //const data = 
   countryByCCA3: async (cca3) => {
-    return await Country.findByPk(cca3.idpais.toUpperCase())
+    return await Country.findByPk(cca3.toUpperCase(), {
+      include: [{
+        model: Activities,
+      }],
+    })
   },
   activityByCCA3: async (id) => {
-    return await Activities.findByPk(id.idpais.toUpperCase())
+    return await Activities.findByPk(id)
   },
   activityByName: async (name) => {
-
     return await Activities.findOne({
       where: { name: name },
     })
@@ -204,12 +207,10 @@ module.exports = {
     if (body.page !== null) {
       if (body.page < 1) body.page = 1; //evita el 0 y negativos
       limit = 10
-
       offset = (body.page - 1) * limit - 1
       if (body.page === 1) { //primera pagina
         limit = 9
         offset = 0
-
       }
     }
     const found = await Country.findAll({

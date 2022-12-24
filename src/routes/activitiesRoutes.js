@@ -35,17 +35,17 @@ router.post("/", async (req, res) => {
 //? BOrra una actividad de 1 solo pais
 router.delete("/", async (req, res) => {
   try {
-
     const selectedPais = await controllers.countryByCCA3(req.query.cca3)
-    const selectedActivity = await controllers.activityByCCA3(req.query.id)
-    const data = await selectedPais.removeActivities(selectedActivity)
-    if (!data) throw new Error('No se eliminó esa actividad del pais indicado')
-    data = [data]
+    const selectedActivity = await controllers.activityByName(req.query.name)
+    const result = await selectedPais.removeActivities(selectedActivity)
+
+    if (!result) throw new Error('No se eliminó esa actividad del pais indicado')
+    data = [result]
     res.status(200).send({ sucess: true, message: `El pais con ID: ${selectedPais} ya no tiene la actividad con ID: ${selectedActivity}`, found: data.length, data: data })
 
   } catch (error) {
     const data = []
-    res.status(501).send({ sucess: false, message: " " + error.message, found: data.length, data: data })
+    res.status(501).send({ sucess: false, message: "Error interno: " + error.message, found: data.length, data: data })
   }
 })
 
