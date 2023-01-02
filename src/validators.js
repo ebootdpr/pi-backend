@@ -35,7 +35,6 @@ function isAlphaNumeric(inputStr, ignoreUnits = false, isCCA3 = false) {
     if (!ucase(code)) return [false, 'Debe comenzar con mayusculas'];
   }
   const arrayDeStrings = inputStr.split(' ')
-  console.log(arrayDeStrings);
   for (const str of arrayDeStrings) {
     if (!ignoreUnits || isCCA3) if (!str)
       return [false, 'No debe contener multiples espacios o terminar en espacio']
@@ -55,24 +54,26 @@ function isAlphaNumeric(inputStr, ignoreUnits = false, isCCA3 = false) {
   return [true, 'Validado'];
 };
 const validateBodyActivities = (body) => {
-  const bodyKeys = Object.keys(body)
-  if (bodyKeys.length === 0) throw new Error('No se envió nada por body');
-  bodyKeys.forEach(key => {
-    if (!validActivitiesAtts.includes(key)) {
-      throw new Error(`No se paso un body valido, debería recibir:
+  if (!Array.isArray(body)) throw new Error('Se debe de enviar un array de actividades por body=[act1,act2...]');
+  for (const ele of body) {
+    const bodyKeys = Object.keys(ele)
+    if (bodyKeys.length === 0) throw new Error('No se envió nada por body');
+    bodyKeys.forEach(key => {
+      if (!validActivitiesAtts.includes(key)) {
+        throw new Error(`No se paso un body valido, debería recibir:
    ${validActivitiesAtts}
    se recibió:
-   ${body.season} `);
-    }
-  })
-
-  if (!isAlphaNumeric(body.name)[0]) throw new Error('name ' + isAlphaNumeric(body.name)[1]);
-  if (!isAlphaNumeric(body.season)[0]) throw new Error('season ' + isAlphaNumeric(body.season)[1]);
-  if (!validSeasons.includes(body.season)) throw new Error('Season incorrecta, valid seasons: ' + validSeasons);
-  if (!strIsNumeric(body.difficulty)) throw new Error('difficulty is NaN');
-  if (!strIsNumeric(body.duration)) throw new Error('duration is NaN');
-  if (!parseInt(body.difficulty) > 0 && !parseInt(body.difficulty) < 6) throw new Error('Difficulty no está entre 1 y 5');
-  if (!parseInt(body.duration) > 0) throw new Error('Duration debe ser mayor a 0');
+   ${ele.season} `);
+      }
+    })
+    if (!isAlphaNumeric(ele.name)[0]) throw new Error('name ' + isAlphaNumeric(ele.name)[1]);
+    if (!isAlphaNumeric(ele.season)[0]) throw new Error('season ' + isAlphaNumeric(ele.season)[1]);
+    if (!validSeasons.includes(ele.season)) throw new Error('Season incorrecta, valid seasons: ' + validSeasons);
+    if (!strIsNumeric(ele.difficulty)) throw new Error('difficulty is NaN');
+    if (!strIsNumeric(ele.duration)) throw new Error('duration is NaN');
+    if (!parseInt(ele.difficulty) > 0 && !parseInt(ele.difficulty) < 6) throw new Error('Difficulty no está entre 1 y 5');
+    if (!parseInt(ele.duration) > 0) throw new Error('Duration debe ser mayor a 0');
+  }
 }
 const validateBodyForBulk = (input) => {
   if (!Array.isArray(input)) throw new Error('Body debe ser un array de paises a crear');
@@ -108,7 +109,6 @@ const validateQuery = (input) => {
     throw new Error('area debe ser un número');
   if (input.population && !strIsNumeric(input.population))
     throw new Error('population debe ser un número');
-  console.log('validacion OK');
   return true;
 };
 const validateCountry = (input) => {
@@ -163,9 +163,6 @@ const validatePageRoute = (params, querys, body) => {
   const keyQuerys = Object.keys(querys)
   const whereKeys = keyQuerys.filter(key => validCountryAtts.includes(key))
   const whereIncludeKeys = keyQuerys.filter(key => validActivitiesAttsAct_.includes(key))
-  console.log(whereIncludeKeys);
-  console.log(keyQuerys);
-  console.log(validActivitiesAttsAct_);
   if (whereKeys.length > 0) {
     whereObj = {}
     whereKeys.forEach(key => {
@@ -175,7 +172,6 @@ const validatePageRoute = (params, querys, body) => {
   if (whereIncludeKeys.length > 0) {
     whereObjIncludes = {}
     whereIncludeKeys.map(key => {
-      console.log(key.slice(4));
       return key.slice(4)
     }).forEach(key => {
       whereObjIncludes[key] = querys['act_' + key]
@@ -184,6 +180,79 @@ const validatePageRoute = (params, querys, body) => {
   return { page, whereObj, whereObjIncludes, orden }
 }
 
+
+const countriesQuery = (querys) => {
+  //los query deben contener los filtros de country
+  let whereObj = null
+  let whereObjIncludes = null
+  //? Checkea y filtra querys para generar los where
+  // * Aprovechand que los querys siempre son strings, filtramos los querys correctos
+  // ? DISEÑO
+  /**
+   * * el whereKeys se usara dentro del where: del findAll de sequelize
+   * * i.e.:  findAll({ where: whereKeys})
+   * * el whereIncludeKeys el el where que esté dentro del include
+   * * i.e.:  findAll({ includes: {where: whereKeys}})
+   * * Ambos seran filtrados solo con los valores validos, asi si se ingresa un query invalido, simplemente
+   * * se lo ignora
+   * ! para hacer query de activity se debe usar prefijo act_ para cada atributo
+   */
+  const keyQuerys = Object.keys(querys)
+  if(keyQuerys.length==0) return { whereObj, whereObjIncludes }; //escalabilidad
+  const whereKeys = keyQuerys.filter(key => validCountryAtts.includes(key))
+  const whereIncludeKeys = keyQuerys.filter(key => validActivitiesAttsAct_.includes(key))
+  if (whereKeys.length > 0) {
+    whereObj = {}
+    whereKeys.forEach(key => {
+      whereObj[key] = querys[key]
+    })
+  }
+  if (whereIncludeKeys.length > 0) {
+    whereObjIncludes = {}
+    whereIncludeKeys.map(key => {
+      return key.slice(4)
+    }).forEach(key => {
+      whereObjIncludes[key] = querys['act_' + key]
+    })
+  }
+
+  //estos objetos deben ser procesados por un controller
+  return { whereObj, whereObjIncludes }
+}
+
+const countriesBody = (body) => {
+
+  /** 
+   * ? DISEÑO
+   * * body = {
+   * * orden: [['cca3', 'ASC']]
+   * * page: 
+   * * }
+   * * Revisar si es objeto y si esta vacio igno
+   * * 
+   */
+  if (typeof body !== 'object') throw new Error(`No se recibio un object por body Debe enviar un body tipo JSON Objeto con orden: [['atributo, ejemplo cca3 o name', 'ASC o DESC']]  y page: #`);
+
+
+  //body.page
+  if (body.page === undefined) body.page = null; //evita la paginación
+  else {    
+    if (isNaN(parseInt(body.page))) throw new Error('Debe ingresar un valor numérico en el body.page');
+    body.page = parseInt(body.page);
+  }
+  if (body.orden === undefined) body.orden = null
+  else {
+    if (body.orden.hasOwnProperty('0')) {
+      if (!Array.isArray(body.orden) && !(body.orden.length === 1) && typeof body.orden[0][1] !== 'string' && typeof body.orden[0][0] !== 'string')
+        throw new Error('body.orden inválido, debe ser un array con 2 strings como elementos')
+      if (!validCountryAtts.includes(body.orden[0][0]))
+        throw new Error('El primer elemento debe ser uno de estos ' + validCountryAtts)
+      if (!['ASC', 'DESC'].includes(body.orden[0][1]))
+        throw new Error('body.orden debe ser ASC o DESC')
+    }
+  }
+  return body
+}
 
 
 module.exports = {
@@ -197,4 +266,6 @@ module.exports = {
   validateCCA3,
   validateAssignBody,
   validatePageRoute,
+  countriesBody,
+  countriesQuery,
 }
