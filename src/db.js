@@ -3,7 +3,7 @@ const fs = require('fs');
 const path = require('path');
 require('dotenv').config();
 const {
-  DB_NAME ,DB_USER, DB_PASSWORD, DB_HOST,
+  DB_NAME ,DB_USER, DB_PASSWORD, DB_HOST,DB_PORT
 } = process.env;
 //https://restcountries.com/v3/all
 const sequelize = new Sequelize(`postgres://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}`, {
