@@ -5,6 +5,4 @@ module.exports = {
   validCountryAtts: ['cca3', 'name', 'flags', 'continents', 'capital', 'subregion', 'area', 'population'], validContinents: ['Europe', 'Asia', 'North America', 'Africa', 'Antarctica', 'South America', 'Oceania', 'Other'],
   validSeasons: ['Verano', 'Otoño', 'Invierno', 'Primavera'],
   forceUpdate: false,
-  SERVER_URL: 'localhost',
-  PORT: 3001,
 }
